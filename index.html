@@ -1,1 +1,554 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍵 Репрайсер Wildberries</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #8B4513, #D2691E);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #4A2C2A, #8B4513);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        .controls {
+            background: #F5F5F5;
+            padding: 20px;
+            border-bottom: 2px solid #DDD;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 5px;
+        }
+        .btn-primary { background: #8B4513; color: white; }
+        .btn-primary:hover { background: #A0522D; transform: translateY(-2px); }
+        .btn-success { background: #2E8B57; color: white; }
+        .btn-success:hover { background: #3CB371; transform: translateY(-2px); }
+        .tabs { display: flex; background: #4A2C2A; flex-wrap: wrap; }
+        .tab { padding: 15px 25px; color: white; cursor: pointer; border: none; background: none; }
+        .tab.active { background: #8B4513; font-weight: bold; }
+        .tab-content { padding: 20px; min-height: 400px; }
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #DDD;
+        }
+        th {
+            background: #4A2C2A;
+            color: white;
+        }
+        .status-bar {
+            background: #2E8B57;
+            color: white;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        .profit-positive { color: #2E8B57; font-weight: bold; }
+        .profit-negative { color: #DC143C; font-weight: bold; }
+        .input-group { margin: 10px 0; }
+        input, select {
+            padding: 10px;
+            border: 2px solid #DDD;
+            border-radius: 5px;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        .upload-area {
+            border: 2px dashed #8B4513;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background: #f9f9f9;
+        }
+        .comparison-card {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍵 Простой Репрайсер Wildberries</h1>
+            <p>Автоматический расчет цен с минимальной маржой 10%</p>
+        </div>
+
+
+        <div class="controls">
+            <button class="btn-primary" onclick="showTab('upload')">Загрузка данных</button>
+            <button class="btn-primary" onclick="showTab('results')">Результаты</button>
+            <button class="btn-primary" onclick="showTab('comparison')">Сравнение</button>
+            <button class="btn-success" onclick="calculatePrices()">Рассчитать цены</button>
+            <button class="btn-primary" onclick="downloadCSV()">Скачать CSV</button>
+        </div>
+
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('upload')">Загрузка данных</button>
+            <button class="tab" onclick="showTab('results')">Результаты</button>
+            <button class="tab" onclick="showTab('comparison')">Сравнение с конкурентами</button>
+        </div>
+
+
+        <div class="tab-content">
+            <!-- Загрузка данных -->
+            <div id="upload" class="tab-pane active">
+                <h3>Загрузка данных через CSV</h3>
+               
+                <div class="upload-area">
+                    <h4>Наши товары</h4>
+                    <p>Формат CSV: Артикул;Название;Себестоимость;Текущая цена;Остаток;Категория</p>
+                    <input type="file" id="productsFile" accept=".csv">
+                    <button class="btn-primary" onclick="loadProducts()">Загрузить товары</button>
+                </div>
+
+
+                <div class="upload-area">
+                    <h4>Данные конкурентов</h4>
+                    <p>Формат CSV: НашАртикул;Конкурент;Цена;НазваниеУКонкурента</p>
+                    <input type="file" id="competitorsFile" accept=".csv">
+                    <button class="btn-primary" onclick="loadCompetitors()">Загрузить конкурентов</button>
+                </div>
+
+
+                <div style="margin-top: 20px;">
+                    <h4>Пример CSV файлов:</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <strong>products.csv:</strong>
+                            <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">
+Артикул;Название;Себестоимость;Текущая цена;Остаток;Категория
+COF001;Арабика Бразилия;800;1000;50;Зерновой
+COF002;Робуста Индия;600;750;30;Зерновой</pre>
+                        </div>
+                        <div>
+                            <strong>competitors.csv:</strong>
+                            <pre style="background: #f5f5f5; padding: 10px; border-radius: 5px;">
+НашАртикул;Конкурент;Цена;НазваниеУКонкурента
+COF001;CoffeeHouse;950;Арабика Бразилия
+COF001;BeanMaster;1050;Арабика Премиум
+COF002;CoffeeHouse;700;Робуста Индия</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Результаты -->
+            <div id="results" class="tab-pane">
+                <h3>Результаты расчета цен</h3>
+                <div id="resultsContent"></div>
+            </div>
+
+
+            <!-- Сравнение -->
+            <div id="comparison" class="tab-pane">
+                <h3>Сравнение с конкурентами</h3>
+                <div id="comparisonContent"></div>
+            </div>
+        </div>
+
+
+        <div class="status-bar" id="statusBar">
+            Загрузите CSV файлы с данными для начала работы
+        </div>
+    </div>
+
+
+    <script>
+        let ourProducts = [];
+        let competitors = [];
+        let calculatedResults = [];
+
+
+        // Показать вкладку
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-pane').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+           
+            document.getElementById(tabName).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+
+        // Загрузка товаров из CSV
+        function loadProducts() {
+            const fileInput = document.getElementById('productsFile');
+            const file = fileInput.files[0];
+           
+            if (!file) {
+                updateStatus('Выберите CSV файл с товарами', 'error');
+                return;
+            }
+
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csv = e.target.result;
+                ourProducts = parseProductsCSV(csv);
+                updateStatus(`Загружено ${ourProducts.length} товаров`);
+            };
+            reader.readAsText(file);
+        }
+
+
+        // Загрузка конкурентов из CSV
+        function loadCompetitors() {
+            const fileInput = document.getElementById('competitorsFile');
+            const file = fileInput.files[0];
+           
+            if (!file) {
+                updateStatus('Выберите CSV файл с конкурентами', 'error');
+                return;
+            }
+
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const csv = e.target.result;
+                competitors = parseCompetitorsCSV(csv);
+                updateStatus(`Загружено ${competitors.length} записей о конкурентах`);
+            };
+            reader.readAsText(file);
+        }
+
+
+        // Парсинг CSV товаров
+        function parseProductsCSV(csv) {
+            const lines = csv.split('\n');
+            const products = [];
+           
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+               
+                const parts = line.split(';');
+                if (parts.length >= 6) {
+                    products.push({
+                        article: parts[0].trim(),
+                        name: parts[1].trim(),
+                        costPrice: parseFloat(parts[2]),
+                        currentPrice: parseFloat(parts[3]),
+                        stock: parseInt(parts[4]),
+                        category: parts[5].trim(),
+                        recommendedPrice: 0
+                    });
+                }
+            }
+           
+            return products;
+        }
+
+
+        // Парсинг CSV конкурентов
+        function parseCompetitorsCSV(csv) {
+            const lines = csv.split('\n');
+            const competitors = [];
+           
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+                if (!line) continue;
+               
+                const parts = line.split(';');
+                if (parts.length >= 4) {
+                    competitors.push({
+                        productArticle: parts[0].trim(),
+                        name: parts[1].trim(),
+                        price: parseFloat(parts[2]),
+                        productName: parts[3].trim()
+                    });
+                }
+            }
+           
+            return competitors;
+        }
+
+
+        // Расчет цен
+        function calculatePrices() {
+            if (ourProducts.length === 0) {
+                updateStatus('Сначала загрузите товары', 'error');
+                return;
+            }
+
+
+            calculatedResults = [];
+            const MIN_MARGIN = 10; // Минимальная маржа 10%
+
+
+            ourProducts.forEach(product => {
+                // Находим конкурентов для этого товара
+                const productCompetitors = competitors.filter(c => c.productArticle === product.article);
+               
+                let recommendedPrice;
+                let strategy;
+
+
+                if (productCompetitors.length > 0) {
+                    // Стратегия: быть на 2% ниже средней цены конкурентов, но не ниже минимальной маржи
+                    const avgCompetitorPrice = productCompetitors.reduce((sum, c) => sum + c.price, 0) / productCompetitors.length;
+                    const minPriceWithMargin = product.costPrice * (1 + MIN_MARGIN / 100);
+                   
+                    recommendedPrice = Math.max(avgCompetitorPrice * 0.98, minPriceWithMargin);
+                    strategy = "Конкурентная";
+                } else {
+                    // Если нет конкурентов - базовая цена с маржой
+                    recommendedPrice = product.costPrice * (1 + MIN_MARGIN / 100);
+                    strategy = "Базовая";
+                }
+
+
+                // Округляем до целых чисел
+                recommendedPrice = Math.round(recommendedPrice);
+
+
+                calculatedResults.push({
+                    ...product,
+                    recommendedPrice: recommendedPrice,
+                    strategy: strategy,
+                    competitorsCount: productCompetitors.length,
+                    minCompetitorPrice: productCompetitors.length > 0 ? Math.min(...productCompetitors.map(c => c.price)) : 0,
+                    avgCompetitorPrice: productCompetitors.length > 0 ?
+                        productCompetitors.reduce((sum, c) => sum + c.price, 0) / productCompetitors.length : 0
+                });
+            });
+
+
+            showResults();
+            showComparison();
+            updateStatus(`Рассчитаны цены для ${calculatedResults.length} товаров`);
+           
+            // Переходим на вкладку результатов
+            showTab('results');
+        }
+
+
+        // Показать результаты
+        function showResults() {
+            const container = document.getElementById('resultsContent');
+           
+            if (calculatedResults.length === 0) {
+                container.innerHTML = '<p>Запустите расчет цен для отображения результатов</p>';
+                return;
+            }
+
+
+            let html = `
+                <table>
+                    <tr>
+                        <th>Артикул</th>
+                        <th>Товар</th>
+                        <th>Себестоимость</th>
+                        <th>Текущая цена</th>
+                        <th>Рек. цена</th>
+                        <th>Стратегия</th>
+                        <th>Маржа</th>
+                        <th>Рекомендация</th>
+                    </tr>
+            `;
+
+
+            calculatedResults.forEach(product => {
+                const currentMargin = ((product.currentPrice - product.costPrice) / product.costPrice * 100);
+                const recommendedMargin = ((product.recommendedPrice - product.costPrice) / product.costPrice * 100);
+                const marginClass = recommendedMargin >= 10 ? 'profit-positive' : 'profit-negative';
+               
+                const priceDifference = product.recommendedPrice - product.currentPrice;
+                let recommendation;
+                if (Math.abs(priceDifference) < 5) {
+                    recommendation = 'Оставить';
+                } else if (priceDifference > 0) {
+                    recommendation = `Повысить на ${priceDifference}₽`;
+                } else {
+                    recommendation = `Понизить на ${Math.abs(priceDifference)}₽`;
+                }
+
+
+                html += `
+                    <tr>
+                        <td>${product.article}</td>
+                        <td>${product.name}</td>
+                        <td>${product.costPrice}₽</td>
+                        <td>${product.currentPrice}₽</td>
+                        <td><strong>${product.recommendedPrice}₽</strong></td>
+                        <td>${product.strategy}</td>
+                        <td class="${marginClass}">${recommendedMargin.toFixed(1)}%</td>
+                        <td>${recommendation}</td>
+                    </tr>
+                `;
+            });
+
+
+            html += '</table>';
+            container.innerHTML = html;
+        }
+
+
+        // Показать сравнение с конкурентами
+        function showComparison() {
+            const container = document.getElementById('comparisonContent');
+           
+            if (calculatedResults.length === 0) {
+                container.innerHTML = '<p>Запустите расчет цен для отображения сравнения</p>';
+                return;
+            }
+
+
+            let html = '';
+
+
+            calculatedResults.forEach(product => {
+                const productCompetitors = competitors.filter(c => c.productArticle === product.article);
+               
+                if (productCompetitors.length === 0) {
+                    html += `
+                        <div class="comparison-card">
+                            <h4>${product.name} (${product.article})</h4>
+                            <p>Нет данных о конкурентах для этого товара</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+
+                const competitorPrices = productCompetitors.map(c => c.price);
+                const minPrice = Math.min(...competitorPrices);
+                const maxPrice = Math.max(...competitorPrices);
+                const avgPrice = competitorPrices.reduce((a, b) => a + b, 0) / competitorPrices.length;
+
+
+                html += `
+                    <div class="comparison-card">
+                        <h4>${product.name} (${product.article})</h4>
+                       
+                        <div class="price-row">
+                            <span>Наша текущая цена:</span>
+                            <span><strong>${product.currentPrice}₽</strong></span>
+                        </div>
+                       
+                        <div class="price-row">
+                            <span>Рекомендуемая цена:</span>
+                            <span><strong style="color: #2E8B57;">${product.recommendedPrice}₽</strong></span>
+                        </div>
+
+
+                        <div class="price-row">
+                            <span>Конкурентов найдено:</span>
+                            <span>${productCompetitors.length}</span>
+                        </div>
+
+
+                        <div class="price-row">
+                            <span>Минимальная цена у конкурентов:</span>
+                            <span>${minPrice}₽</span>
+                        </div>
+
+
+                        <div class="price-row">
+                            <span>Средняя цена у конкурентов:</span>
+                            <span>${avgPrice.toFixed(0)}₽</span>
+                        </div>
+
+
+                        <div class="price-row">
+                            <span>Максимальная цена у конкурентов:</span>
+                            <span>${maxPrice}₽</span>
+                        </div>
+
+
+                        <div style="margin-top: 15px;">
+                            <strong>Конкуренты:</strong>
+                            ${productCompetitors.map(comp => `
+                                <div style="font-size: 14px; margin: 5px 0; padding: 5px; background: white; border-radius: 3px;">
+                                    ${comp.name}: ${comp.price}₽ (${comp.productName})
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+
+
+            container.innerHTML = html;
+        }
+
+
+        // Скачать CSV
+        function downloadCSV() {
+            if (calculatedResults.length === 0) {
+                updateStatus('Сначала рассчитайте цены', 'error');
+                return;
+            }
+
+
+            let csv = 'Артикул;Название;Себестоимость;Текущая цена;Рекомендуемая цена;Стратегия;Текущая маржа %;Рекомендуемая маржа %;Остаток;Категория;Конкурентов\n';
+           
+            calculatedResults.forEach(product => {
+                const currentMargin = ((product.currentPrice - product.costPrice) / product.costPrice * 100);
+                const recommendedMargin = ((product.recommendedPrice - product.costPrice) / product.costPrice * 100);
+               
+                csv += `${product.article};${product.name};${product.costPrice};${product.currentPrice};${product.recommendedPrice};${product.strategy};${currentMargin.toFixed(1)};${recommendedMargin.toFixed(1)};${product.stock};${product.category};${product.competitorsCount}\n`;
+            });
+           
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `repricing_results_${new Date().toISOString().slice(0,10)}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+           
+            updateStatus('CSV файл скачан');
+        }
+
+
+        // Обновление статуса
+        function updateStatus(message, type = 'success') {
+            const statusBar = document.getElementById('statusBar');
+            statusBar.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            statusBar.style.background = type === 'error' ? '#DC143C' : '#2E8B57';
+        }
+    </script>
+</body>
+</html>
 
